@@ -40,3 +40,6 @@ All four variables are optional. `package` defaults to the section name (`bot1` 
 
 #### How it works
 The bots are loaded dynamically. Then a [webhook](https://core.telegram.org/bots/webhooks) is set up for each one, based on a given (or dynamically generated) endpoint, and is registered in the Flask app.
+
+### Example
+See https://github.com/aban-m/elizacf.
