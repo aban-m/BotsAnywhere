@@ -27,7 +27,7 @@ def make_endpoint(endpoint: str, bot = None):
         
     return '/' + urllib.parse.quote(endpoint)
     
-def read_config_file(path: str) -> dict:
+def read_bots_config(path: str) -> dict:
     config = ConfigParser()
 
     logger.debug(f'Loading path {path}.')
@@ -49,10 +49,15 @@ def read_config_file(path: str) -> dict:
         out[bot_name] = this_config
 
     logger.debug(f'Read the metadata of {len(out)} bots.')
-
+    
     return out
 
-def load_bots(config: dict) -> dict:
+def read_global_config(path: str):
+    config = ConfigParser()
+    config.read(path)
+    return config['config']
+
+def _load_bots(config: dict) -> dict:
     bots = {}
 
     for bot_name, bot_config in config.items():
@@ -79,11 +84,10 @@ def load_bots(config: dict) -> dict:
 
     return bots
 
-
-def load(path) -> dict:
+def load_bots(bots_path: str) -> dict:
     ''' Load a list of bots from a bots.ini file '''
-    config = read_config_file(path)
-    bots = load_bots(config)
+    config = read_bots_config(bots_path)
+    bots = _load_bots(config)
 
     for name in config:
         bot = bots[name]
@@ -92,3 +96,10 @@ def load(path) -> dict:
         config[name]['bot'] = bot
         
     return config
+
+def boot(global_path: str):
+    ''' Reads a global config file, and then loads the bots. '''
+    config = read_global_config(global_path)
+    bots_path = config.get('bots', 'bots.ini')
+    bots = load_bots(bots_path)
+    return config, bots
