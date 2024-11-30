@@ -1,18 +1,33 @@
 from importlib import import_module
-import logging
 import sys
+import logging
 from configparser import ConfigParser
+import random
+import urllib
 
-
-logger = logging.getLogger('loader')
+ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+LENGTH = 8
 DEFAULT_CONFIG = {
-    'path': '.',        # where to look for the package
-    'package': None,            # default package = bot name
-    'export_name': 'bot',       # the variable holding the Bot instance
-    'endpoint': '/<token>'      # default endpoint in the Flask app
+    'path': '.',                    # where to look for the package
+    'package': None,                # default package = bot name
+    'export_name': 'bot',           # the variable holding the Bot instance
+    'endpoint': '/tg-<rand>'        # default endpoint in the Flask app (<token> also possible)
 }
+logger = logging.getLogger('loader')
 
-def load_config_file(path: str) -> dict:
+def make_endpoint(endpoint: str, bot = None):
+    endpoint = endpoint.lstrip('/')
+    
+    if '<token>' in endpoint:
+        endpoint = endpoint.replace('<token>', bot.token)
+        
+    if '<rand>' in endpoint:
+        rand = ''.join(random.choice(ALPHABET) for _ in range(LENGTH))
+        endpoint = endpoint.replace('<rand>', rand)
+        
+    return '/' + urllib.parse.quote(endpoint)
+    
+def read_config_file(path: str) -> dict:
     config = ConfigParser()
 
     logger.debug(f'Loading path {path}.')
@@ -46,14 +61,15 @@ def load_bots(config: dict) -> dict:
         package = bot_config['package']
         
         sys.path.insert(0, bot_config['path'])
-        logger.debug(f'Moved to {bot_config["path"]}. Importing {package}.')
+        logger.debug(f'Importing {package}.')
         try:
             bot = getattr(import_module(package), 'bot', None)
         except Exception as e:
             raise e
         finally:
             sys.path.pop(0)
-
+            logger.debug(f'Removed path corresponding to {bot_name}.')
+            
         if not bot:
             raise NameError(f'Bot was not exported from {package} under {bot_config["export_name"]}.')
 
@@ -62,3 +78,17 @@ def load_bots(config: dict) -> dict:
         bots[bot_name] = bot
 
     return bots
+
+
+def load(path) -> dict:
+    ''' Load a list of bots from a bots.ini file '''
+    config = read_config_file(path)
+    bots = load_bots(config)
+
+    for name in config:
+        bot = bots[name]
+        endpoint = make_endpoint(config[name]['endpoint'], bot)
+        config[name]['endpoint'] = endpoint
+        config[name]['bot'] = bot
+        
+    return config
