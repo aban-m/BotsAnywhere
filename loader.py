@@ -1,12 +1,12 @@
-import importlib             # magic.
+from importlib import import_module
 import logging
+import sys
 from configparser import ConfigParser
 
 
 logger = logging.getLogger('loader')
-
 DEFAULT_CONFIG = {
-    'package_path': '.',        # where to look for the package
+    'path': '.',        # where to look for the package
     'package': None,            # default package = bot name
     'export_name': 'bot',       # the variable holding the Bot instance
     'endpoint': '/<token>'      # default endpoint in the Flask app
@@ -44,10 +44,16 @@ def load_bots(config: dict) -> dict:
         # import the relevant bot object
         _result = {}
         package = bot_config['package']
+        
+        sys.path.insert(0, bot_config['path'])
+        logger.debug(f'Moved to {bot_config["path"]}. Importing {package}.')
+        try:
+            bot = getattr(import_module(package), 'bot', None)
+        except Exception as e:
+            raise e
+        finally:
+            sys.path.pop(0)
 
-        logger.debug(f'Importing {package}.')
-        importlib.__import__(package, locals=_result)
-        bot = getattr(_result[package], bot_config['export_name'], None)
         if not bot:
             raise NameError(f'Bot was not exported from {package} under {bot_config["export_name"]}.')
 
@@ -56,5 +62,3 @@ def load_bots(config: dict) -> dict:
         bots[bot_name] = bot
 
     return bots
-
-        

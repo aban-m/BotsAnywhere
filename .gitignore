@@ -1,2 +1,3 @@
-.py[cod]
-__pycache__
+*.ini
+*.py[cod]
+__pycache__/*
