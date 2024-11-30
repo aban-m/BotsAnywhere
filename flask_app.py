@@ -34,7 +34,7 @@ def register_bot(bot_config):
         else:
             flask.abort(403)
 
-    app.add_url_rule(endpoint, hook, methods=['POST'])
+    app.add_url_rule(endpoint, bot.get_me().username, hook, methods=['POST'])
 
 def register_all_bots():
     for _, bot_config in bots.items():
@@ -46,3 +46,5 @@ def index():
     running = '<ul>' + '\n'.join(f'<li>{name}</li>' for name in bots) + '</ul>'
     return '<b>Running bots:</b><br />\n'+running
 
+
+register_all_bots()
